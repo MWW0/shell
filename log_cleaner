@@ -1,0 +1,10 @@
+#!/bin/bash
+today=$(date "+%Y%m%d")
+rate=`df -Ph | grep /dev/vda1 | awk '{print $5}'`
+F=`echo $rate | awk -F% '{print $1}'`
+if [ $F -ge 85 ];then
+    for i in `ls /usr/nginx_home/logs/*.log`;
+    do `echo ' ' > $i`;
+    done;
+  else echo "$(date +%F) 容量没有超过哦"
+fi
