@@ -4,6 +4,7 @@ today=$(date "+%Y%m%d")
 F=`df -Ph | grep /dev/vda1 | awk '{print $5}'| awk -F% '{print $1}'`    #/dev/vda1需要按需调整
 
 if [ $F -ge 85 ];then
+    echo "$(date +%F) 容量超过了"
     for i in `ls /usr/nginx_home/logs/*.log`;
     do `echo ' ' > $i`;
     done;
