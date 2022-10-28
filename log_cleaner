@@ -1,4 +1,5 @@
 #!/bin/bash
+#1 0 * * * /bin/sh /this.sh >> /tmp/nginx_log_delete.log 2>&1
 today=$(date "+%Y%m%d")
 rate=`df -Ph | grep /dev/vda1 | awk '{print $5}'`
 F=`echo $rate | awk -F% '{print $1}'`
