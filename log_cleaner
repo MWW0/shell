@@ -1,11 +1,12 @@
 #!/bin/bash
 #1 0 * * * /bin/sh /this.sh >> /tmp/nginx_log_delete.log 2>&1
 today=$(date "+%Y%m%d")
-rate=`df -Ph | grep /dev/vda1 | awk '{print $5}'`
-F=`echo $rate | awk -F% '{print $1}'`
+F=`df -Ph | grep /dev/vda1 | awk '{print $5}'| awk -F% '{print $1}'`    #/dev/vda1需要按需调整
+
 if [ $F -ge 85 ];then
     for i in `ls /usr/nginx_home/logs/*.log`;
     do `echo ' ' > $i`;
     done;
+    #find /路径 -mtime +10 -name "skywalking-oap-server-2022*.log" -exec rm -rf {} \;
   else echo "$(date +%F) 容量没有超过哦"
 fi
