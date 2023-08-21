@@ -1,2 +1,46 @@
-#!/usr/bin/bash
-set -e
+#!/bin/bash
+
+# 设置阈值
+THRESHOLD_PERCENT=75
+DELETE_TARGET_PERCENT=70
+
+# 获取当前磁盘使用情况
+get_disk_usage() {
+    df -h / | awk 'NR==2 {print $5}' | cut -d'%' -f1
+}
+
+# 获取最旧的日志文件
+get_oldest_log() {
+    find "$log_dir" -type f -printf "%T@ %p\n" | sort -n | head -n 1 | awk '{print $2}'
+}
+
+# 设置日志文件路径，根据你的实际情况修改
+log_dir="/var/log"
+
+current_usage=$(get_disk_usage)
+
+if [ "$current_usage" -gt "$THRESHOLD_PERCENT" ]; then
+    echo "磁盘使用率超过 ${THRESHOLD_PERCENT}%, 开始清理日志文件..."
+
+    while true; do
+        oldest_log=$(get_oldest_log)
+
+        if [ -z "$oldest_log" ]; then
+            echo "无法找到更多可删除的日志文件。"
+            break
+        fi
+
+        # 删除最旧的日志文件
+        echo "删除日志文件：$oldest_log"
+        rm "$oldest_log"
+
+        current_usage=$(get_disk_usage)
+
+        if [ "$current_usage" -le "$DELETE_TARGET_PERCENT" ]; then
+            echo "磁盘使用率已降低至 ${current_usage}%, 清理完成。"
+            break
+        fi
+    done
+else
+    echo "磁盘使用率正常，无需清理日志文件。"
+fi
