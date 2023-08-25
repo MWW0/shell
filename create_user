@@ -1,0 +1,30 @@
+#!/bin/bash
+
+while getopts ":u:p:" opt; do
+  case $opt in
+    u) username="$OPTARG";;
+    p) password="$OPTARG";;
+    \?) echo "无效的选项: -$OPTARG" >&2; exit 1;;
+    :) echo "选项 -$OPTARG 需要一个参数。" >&2; exit 1;;
+  esac
+done
+
+# 创建一个时间戳
+timestamp=$(date +"%Y%m%d%H%M%S")
+
+# 备份sudoers文件
+sudo cp /etc/sudoers /etc/sudoers.bak.$timestamp
+
+# 创建用户
+sudo useradd $username
+
+# 设置用户密码
+echo "$username:$password" | sudo chpasswd
+
+# 将用户添加到sudo用户组
+sudo usermod -aG root $username
+
+# 在备份的sudoers文件中找到匹配的注释行，并在其下方添加新用户的sudo权限
+sudo sed -i "/^## Allow root to run any commands anywhere/a $username    ALL=(ALL)NOPASSWD:       ALL" /etc/sudoers
+
+echo "用户 $username 创建并设置完成，并且sudoers文件已备份。"
