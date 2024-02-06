@@ -1,0 +1,54 @@
+#!/bin/bash
+if [ ! "$2" ]; then
+    PORT=443
+fi
+if [ ! "$1" ]; then
+    echo -e "\033[31mPLS Take U Domain to After\033[0m"
+else
+    echo -e "\033[36m\033[45;33m>> Domain: $1:$2$PORT <<\033[0m"
+    echo -e "\033[36m==Dig===================================\033[0m"
+    echo | dig $1 +short
+    echo -e "\033[36m==Response Headers======================\033[0m"
+    echo | curl -s --head $1 | grep "Server"
+    echo -e "\033[36m==Check SSL Date========================\033[0m"
+    sslinfo=$(echo | openssl s_client -servername $1 -connect $1:$2$PORT 2>/dev/null)
+    if [ -z "$sslinfo" ]; then
+        echo -e "无法检测 $1:$2$PORT 的证书"
+        echo -e "\033[36m========================================\033[0m"
+        exit 1
+    fi
+    end_date=$(echo "$sslinfo" | openssl x509 -noout -enddate | cut -d= -f 2)
+    not_after=$(date -d "$end_date" +%s)
+    now=$(date +%s)
+    exp_days=$(( (not_after - now) / 86400 ))
+    if [ $exp_days -lt 0 ]; then
+        start_date=$(echo "$sslinfo" | openssl x509 -noout -startdate | cut -d= -f 2)
+        echo -e "SSL 证书已经过期 $((exp_days*-1)) 天\n证书 SAN:"
+        sans=$(echo "$sslinfo" | openssl x509 -noout -text | grep -oP 'DNS:\K([^\n,]+)' | awk '{$1=$1};1' | sed 's/^/  /')
+        if [ "$sans" ]; then
+            echo -e "$sans"
+        fi
+        echo -e "证书日期:\n  $(date -d "$start_date" '+%Y年%m月%d日 %T')\n  $(date -d "$end_date" '+%Y年%m月%d日 %T')\n证书指纹:\n  $(echo "$sslinfo" | openssl x509 -fingerprint -noout | cut -d= -f 2)"
+        echo -e "\033[36m========================================\033[0m"
+        exit 1
+    fi
+    if [[ ! $sslinfo =~ "Verify return code: 0 (ok)" ]]; then
+        start_date=$(echo "$sslinfo" | openssl x509 -noout -startdate | cut -d= -f 2)
+        echo -e "SSL 证书链不完整或无效\n证书 SAN:"
+        sans=$(echo "$sslinfo" | openssl x509 -noout -text | grep -oP 'DNS:\K([^\n,]+)' | awk '{$1=$1};1' | sed 's/^/  /')
+        if [ "$sans" ]; then
+            echo -e "$sans"
+        fi
+        echo -e "证书日期:\n  $(date -d "$start_date" '+%Y年%m月%d日 %T')\n  $(date -d "$end_date" '+%Y年%m月%d日 %T')\n证书指纹:\n  $(echo "$sslinfo" | openssl x509 -fingerprint -noout | cut -d= -f 2)"
+        echo -e "\033[36m========================================\033[0m"
+        exit 1
+    fi
+    start_date=$(echo "$sslinfo" | openssl x509 -noout -startdate | cut -d= -f 2)
+    sans=$(echo "$sslinfo" | openssl x509 -noout -text | grep -oP 'DNS:\K([^\n,]+)' | awk '{$1=$1};1' | sed 's/^/  /')
+    echo -e "SSL 证书有效，还有 $exp_days 天过期\n证书 SAN:"
+    if [ "$sans" ]; then
+        echo -e "$sans"
+    fi
+    echo -e "证书日期:\n  $(date -d "$start_date" '+%Y年%m月%d日 %T')\n  $(date -d "$end_date" '+%Y年%m月%d日 %T')\n证书指纹:\n  $(echo "$sslinfo" | openssl x509 -fingerprint -noout | cut -d= -f 2)"
+    echo -e "\033[36m========================================\033[0m"
+fi
